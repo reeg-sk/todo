@@ -27,6 +27,18 @@ const Query = objectType({
       },
     });
 
+    t.field("userById", {
+      type: "User",
+      args: {
+        id: nonNull(intArg()),
+      },
+      resolve: (_parent, args, context: Context) => {
+        return context.prisma.user.findUnique({
+          where: { id: args.id || undefined },
+        });
+      },
+    });
+
     t.nullable.field("workspaceById", {
       type: "Workspace",
       args: {
@@ -70,6 +82,44 @@ const Mutation = objectType({
       },
     });
 
+    t.field("addItem", {
+      type: "Item",
+      args: {
+        data: nonNull(
+          arg({
+            type: "addItemInput",
+          })
+        ),
+      },
+      resolve: (_, args, context: Context) => {
+        return context.prisma.item.create({
+          data: {
+            name: args.data.name,
+            workspace: { connect: { id: args.data.id } },
+          },
+        });
+      },
+    });
+
+    // t.field("updateItem", {
+    //   type: "Item",
+    //   args: {
+    //     data: nonNull(
+    //       arg({
+    //         type: "addItemInput",
+    //       })
+    //     ),
+    //   },
+    //   resolve: (_, args, context: Context) => {
+    //     return context.prisma.item.update({
+    //       data: {
+    //         ...args
+    //       },
+    //       where: { id: args.id }
+    //     });
+    //   },
+    // });
+
     t.field("createWorkspace", {
       type: "Workspace",
       args: {
@@ -89,6 +139,18 @@ const Mutation = objectType({
               connect: { email: args.authorEmail },
             },
           },
+        });
+      },
+    });
+
+    t.field("removeItem", {
+      type: "Item",
+      args: {
+        id: nonNull(intArg()),
+      },
+      resolve: (_, args, context: Context) => {
+        return context.prisma.item.delete({
+          where: { id: args.id },
         });
       },
     });
@@ -206,6 +268,14 @@ const TypeEnum = enumType({
   members: ["TODO", "DONE", "FAIL"],
 });
 
+const addItemInput = inputObjectType({
+  name: "addItemInput",
+  definition(t) {
+    t.nonNull.int("id");
+    t.nonNull.string("name");
+  },
+});
+
 const UserUniqueInput = inputObjectType({
   name: "UserUniqueInput",
   definition(t) {
@@ -232,7 +302,6 @@ const UserCreateInput = inputObjectType({
   },
 });
 
-
 export const schema = makeSchema({
   types: [
     Query,
@@ -241,6 +310,7 @@ export const schema = makeSchema({
     User,
     Item,
     TypeEnum,
+    addItemInput,
     UserUniqueInput,
     UserCreateInput,
     WorkspaceCreateInput,

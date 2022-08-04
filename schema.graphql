@@ -16,13 +16,16 @@ type Item {
 }
 
 type Mutation {
+  addItem(data: addItemInput!): Item
   createWorkspace(authorEmail: String!, data: WorkspaceCreateInput!): Workspace
   deleteWorkspace(id: Int!): Workspace
+  removeItem(id: Int!): Item
   signupUser(data: UserCreateInput!): User!
 }
 
 type Query {
   allUsers: [User!]!
+  userById(id: Int!): User
   workspaceById(id: Int!): Workspace
 }
 
@@ -67,4 +70,9 @@ type Workspace {
 input WorkspaceCreateInput {
   color: String!
   title: String!
+}
+
+input addItemInput {
+  id: Int!
+  name: String!
 }
