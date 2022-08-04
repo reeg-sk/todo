@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  title     String   @db.VarChar(128)
+  color     String   @db.VarChar(9)
+  owner     User     @relation(name: "owner", fields: [ownerId], references: [id])
+  ownerId   Int
+  users     User[]
+  items     Item[]
+}
+
+model Item {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(128)
+  type        Type      @default(TODO)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId Int
+}
+
+model User {
+  id        Int         @id @default(autoincrement())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  email     String      @unique
+  name      String?     @db.VarChar(64)
+  password  String      @db.VarChar(255)
+  verified  Boolean     @default(false)
+  owned     Workspace[] @relation(name: "owner")
+  shared    Workspace[]
+}
+
+enum Type {
+  DONE
+  FAIL
+  TODO
+}
