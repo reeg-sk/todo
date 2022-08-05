@@ -1,10 +1,17 @@
 import { ApolloServer } from 'apollo-server'
 import { schema } from './schema'
-import { context } from './context'
+import { createContext } from './context'
 
+// TODO: https://www.envelop.dev/plugins/use-operation-field-permissions - permission layer
 const server = new ApolloServer({
   schema: schema,
-  context: context,
+  context: createContext,
+  csrfPrevention: true,
+  cache: 'bounded',
+  cors: {
+    origin: ['*'],
+    credentials: true,
+  },
 })
 
 server.listen().then(async ({ url }) => {
