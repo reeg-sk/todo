@@ -178,13 +178,14 @@ const Mutation = objectType({
       },
       resolve: (_, args, context: Context) => {
         // TODO: Remake to work with name and custom #1234 (id) number to not be so easy to spam others
+        // TODO: Owner should not connect to shared
         return context.prisma.workspace.update({
           data: {
             users: {
               connect: { id: args.data.id },
             },
           },
-          where: { id: args.workspaceId },
+          where: { id: args.workspaceId, },
         })
       },
     })

@@ -8,10 +8,10 @@ const server = new ApolloServer({
   context: createContext,
   csrfPrevention: true,
   cache: 'bounded',
-  cors: {
-    origin: ['*'],
-    credentials: true,
-  },
+  // cors: {
+  //   origin: ['*'],
+  //   credentials: true,
+  // },
 })
 
 server.listen().then(async ({ url }) => {
