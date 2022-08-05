@@ -90,35 +90,37 @@ const Mutation = objectType({
             type: "addItemInput",
           })
         ),
+        workspaceId: nonNull(intArg())
       },
       resolve: (_, args, context: Context) => {
         return context.prisma.item.create({
           data: {
             name: args.data.name,
-            workspace: { connect: { id: args.data.id } },
+            workspace: { connect: { id: args.workspaceId } },
           },
         });
       },
     });
 
-    // t.field("updateItem", {
-    //   type: "Item",
-    //   args: {
-    //     data: nonNull(
-    //       arg({
-    //         type: "addItemInput",
-    //       })
-    //     ),
-    //   },
-    //   resolve: (_, args, context: Context) => {
-    //     return context.prisma.item.update({
-    //       data: {
-    //         ...args
-    //       },
-    //       where: { id: args.id }
-    //     });
-    //   },
-    // });
+    t.field("updateItem", {
+      type: "Item",
+      args: {
+        data: nonNull(
+          arg({
+            type: "updateItemInput",
+          })
+        ),
+        itemId: nonNull(intArg())
+      },
+      resolve: (_, args, context: Context) => {
+        return context.prisma.item.update({
+          data: {
+            type: args.data.type
+          },
+          where: { id: args.itemId }
+        });
+      },
+    });
 
     t.field("createWorkspace", {
       type: "Workspace",
@@ -166,6 +168,52 @@ const Mutation = objectType({
         });
       },
     });
+
+    t.field("shareWorkspace", {
+      type: "Workspace",
+      args: {
+        data: nonNull(
+          arg({
+            type: "WorkspaceShareInput",
+          })
+        ),
+        workspaceId: nonNull(intArg()),
+      },
+      resolve: (_, args, context: Context) => {
+        // TODO: Remake to work with name and custom #1234 (id) number to not be so easy to spam others
+        return context.prisma.workspace.update({
+          data: {
+            users: { 
+              connect: { id: args.data.id },
+            }
+          },
+          where: { id: args.workspaceId },
+        });
+      },
+    });
+
+    t.field("unshareWorkspace", {
+      type: "Workspace",
+      args: {
+        data: nonNull(
+          arg({
+            type: "WorkspaceShareInput",
+          })
+        ),
+        workspaceId: nonNull(intArg()),
+      },
+      resolve: (_, args, context: Context) => {
+        // TODO: Remake to work with name and custom #1234 (id) number to not be so easy to spam others
+        return context.prisma.workspace.update({
+          data: {
+            users: { 
+              disconnect: { id: args.data.id },
+            }
+          },
+          where: { id: args.workspaceId },
+        });
+      },
+    });
   },
 });
 
@@ -175,7 +223,6 @@ const User = objectType({
     t.nonNull.int("id");
     t.string("name");
     t.nonNull.string("email");
-    t.string("password");
     t.boolean("verified");
     t.nonNull.list.nonNull.field("owned", {
       type: "Workspace",
@@ -271,8 +318,16 @@ const TypeEnum = enumType({
 const addItemInput = inputObjectType({
   name: "addItemInput",
   definition(t) {
-    t.nonNull.int("id");
     t.nonNull.string("name");
+  },
+});
+
+const updateItemInput = inputObjectType({
+  name: "updateItemInput",
+  definition(t) {
+    t.nonNull.field("type", {
+      type: "TypeEnum",
+    });
   },
 });
 
@@ -289,7 +344,13 @@ const WorkspaceCreateInput = inputObjectType({
   definition(t) {
     t.nonNull.string("title");
     t.nonNull.string("color");
-    // TODO
+  },
+});
+
+const WorkspaceShareInput = inputObjectType({
+  name: "WorkspaceShareInput",
+  definition(t) {
+    t.nonNull.int("id");
   },
 });
 
@@ -311,9 +372,11 @@ export const schema = makeSchema({
     Item,
     TypeEnum,
     addItemInput,
+    updateItemInput,
     UserUniqueInput,
     UserCreateInput,
     WorkspaceCreateInput,
+    WorkspaceShareInput,
     DateTime,
   ],
   outputs: {
