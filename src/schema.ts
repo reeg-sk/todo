@@ -1,4 +1,5 @@
 import {
+  fieldAuthorizePlugin,
   intArg,
   makeSchema,
   nonNull,
@@ -11,6 +12,7 @@ import {
 } from 'nexus'
 import { DateTimeResolver } from 'graphql-scalars'
 import { Context } from './context'
+import { getUserId } from './utils'
 
 export const DateTime = asNexusMethod(DateTimeResolver, 'date')
 
@@ -19,6 +21,7 @@ const Query = objectType({
   definition(t) {
     t.nonNull.list.nonNull.field('allUsers', {
       type: 'User',
+      authorize: (_parent, _args, context: Context) => !!getUserId(context),
       resolve: (_parent, _args, context: Context) => {
         return context.prisma.user.findMany()
       },
@@ -27,7 +30,7 @@ const Query = objectType({
     t.field('userById', {
       type: 'User',
       args: {
-        id: nonNull(intArg()),
+        id: nonNull(stringArg()),
       },
       resolve: (_parent, args, context: Context) => {
         return context.prisma.user.findUnique({
@@ -70,8 +73,8 @@ const Mutation = objectType({
             password: args.data.password,
             owned: {
               create: {
-                title: 'Todos',
-                color: '#000',
+                title: 'Shopping cart',
+                color: '#ACE4AA',
               },
             },
           },
@@ -182,10 +185,10 @@ const Mutation = objectType({
         return context.prisma.workspace.update({
           data: {
             users: {
-              connect: { id: args.data.id },
+              connect: { name: args.data.name },
             },
           },
-          where: { id: args.workspaceId, },
+          where: { id: args.workspaceId },
         })
       },
     })
@@ -201,11 +204,10 @@ const Mutation = objectType({
         workspaceId: nonNull(intArg()),
       },
       resolve: (_, args, context: Context) => {
-        // TODO: Remake to work with name and custom #1234 (id) number to not be so easy to spam others
         return context.prisma.workspace.update({
           data: {
             users: {
-              disconnect: { id: args.data.id },
+              disconnect: { name: args.data.name },
             },
           },
           where: { id: args.workspaceId },
@@ -218,7 +220,7 @@ const Mutation = objectType({
 const User = objectType({
   name: 'User',
   definition(t) {
-    t.nonNull.int('id')
+    t.nonNull.string('id')
     t.string('name')
     t.nonNull.string('email')
     t.boolean('verified')
@@ -348,7 +350,7 @@ const WorkspaceCreateInput = inputObjectType({
 const WorkspaceShareInput = inputObjectType({
   name: 'WorkspaceShareInput',
   definition(t) {
-    t.nonNull.int('id')
+    t.nonNull.string('name')
   },
 })
 
@@ -356,8 +358,8 @@ const UserCreateInput = inputObjectType({
   name: 'UserCreateInput',
   definition(t) {
     t.nonNull.string('email')
-    t.string('name')
     t.nonNull.string('password')
+    t.string('name')
   },
 })
 
@@ -393,4 +395,5 @@ export const schema = makeSchema({
       },
     ],
   },
+  plugins: [fieldAuthorizePlugin()],
 })

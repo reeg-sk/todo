@@ -28,7 +28,7 @@ type Mutation {
 
 type Query {
   allUsers: [User!]!
-  userById(id: Int!): User
+  userById(id: String!): User
   workspaceById(id: Int!): Workspace
 }
 
@@ -40,7 +40,7 @@ enum TypeEnum {
 
 type User {
   email: String!
-  id: Int!
+  id: String!
   name: String
   owned: [Workspace!]!
   shared: [Workspace]
@@ -75,7 +75,7 @@ input WorkspaceCreateInput {
 }
 
 input WorkspaceShareInput {
-  id: Int!
+  name: String!
 }
 
 input addItemInput {

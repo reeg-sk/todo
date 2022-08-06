@@ -8,12 +8,14 @@ const server = new ApolloServer({
   context: createContext,
   csrfPrevention: true,
   cache: 'bounded',
-  // cors: {
-  //   origin: ['*'],
-  //   credentials: true,
-  // },
+  cors: {
+    origin: '*',
+    credentials: true,
+  },
 })
 
-server.listen().then(async ({ url }) => {
+const port = process.env.PORT || 4000
+
+server.listen({ port }).then(async ({ url }) => {
   console.log(`🚀 Server ready at: ${url}`)
 })
