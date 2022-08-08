@@ -12,7 +12,9 @@ import {
 } from 'nexus'
 import { DateTimeResolver } from 'graphql-scalars'
 import { Context } from './context'
-import { getUserId } from './utils'
+import { APP_SECRET } from './utils'
+import { sign } from 'jsonwebtoken'
+import { compare, hash } from 'bcryptjs'
 
 export const DateTime = asNexusMethod(DateTimeResolver, 'date')
 
@@ -21,20 +23,18 @@ const Query = objectType({
   definition(t) {
     t.nonNull.list.nonNull.field('allUsers', {
       type: 'User',
-      authorize: (_parent, _args, context: Context) => !!getUserId(context),
+      authorize: (_parent, _args, context: Context) => !!context.userId,
       resolve: (_parent, _args, context: Context) => {
         return context.prisma.user.findMany()
       },
     })
 
-    t.field('userById', {
+    t.field('userDetails', {
       type: 'User',
-      args: {
-        id: nonNull(stringArg()),
-      },
-      resolve: (_parent, args, context: Context) => {
+      authorize: (_parent, _args, context: Context) => !!context.userId,
+      resolve: (_parent, _args, context: Context) => {
         return context.prisma.user.findUnique({
-          where: { id: args.id || undefined },
+          where: { id: context.userId || undefined },
         })
       },
     })
@@ -42,11 +42,14 @@ const Query = objectType({
     t.nullable.field('workspaceById', {
       type: 'Workspace',
       args: {
-        id: nonNull(intArg()),
+        workspaceId: nonNull(intArg()),
       },
+      authorize: (_parent, _args, context: Context) => !!context.userId,
       resolve: (_parent, args, context: Context) => {
         return context.prisma.workspace.findUnique({
-          where: { id: args.id || undefined },
+          where: {
+            id: args.workspaceId || undefined,
+          },
         })
       },
     })
@@ -56,31 +59,57 @@ const Query = objectType({
 const Mutation = objectType({
   name: 'Mutation',
   definition(t) {
-    t.nonNull.field('signupUser', {
-      type: 'User',
+    t.field('login', {
+      type: 'AuthPayload',
       args: {
-        data: nonNull(
-          arg({
-            type: 'UserCreateInput',
-          }),
-        ),
+        email: nonNull(stringArg()),
+        password: nonNull(stringArg()),
       },
-      resolve: (_, args, context: Context) => {
-        return context.prisma.user.create({
-          data: {
-            name: args.data.name,
-            email: args.data.email,
-            password: args.data.password,
-            owned: {
-              create: {
-                title: 'Shopping cart',
-                color: '#ACE4AA',
-              },
-            },
+      resolve: async (_parent, { email, password }, context: Context) => {
+        let message = null
+        const user = await context.prisma.user.findUnique({
+          where: {
+            email,
           },
         })
+        if (!user) {
+          message = 'Invalid username or password!'
+        }
+        if (!user || !(await compare(password, user.password))) {
+          message = 'Invalid username or password!'
+        }
+        return {
+          message,
+          token: user && sign({ userId: user.id }, APP_SECRET),
+          user,
+        }
       },
-    })
+    }),
+      t.nonNull.field('signupUser', {
+        type: 'User',
+        args: {
+          data: nonNull(
+            arg({
+              type: 'UserCreateInput',
+            }),
+          ),
+        },
+        resolve: async (_, args, context: Context) => {
+          return context.prisma.user.create({
+            data: {
+              name: args.data.name,
+              email: args.data.email,
+              password: await hash(args.data.password, 12),
+              owned: {
+                create: {
+                  title: 'Shopping cart',
+                  color: '#ACE4AA',
+                },
+              },
+            },
+          })
+        },
+      })
 
     t.field('addItem', {
       type: 'Item',
@@ -363,6 +392,15 @@ const UserCreateInput = inputObjectType({
   },
 })
 
+const AuthPayload = objectType({
+  name: 'AuthPayload',
+  definition(t) {
+    t.string('message')
+    t.string('token')
+    t.field('user', { type: 'User' })
+  },
+})
+
 export const schema = makeSchema({
   types: [
     Query,
@@ -377,6 +415,7 @@ export const schema = makeSchema({
     UserCreateInput,
     WorkspaceCreateInput,
     WorkspaceShareInput,
+    AuthPayload,
     DateTime,
   ],
   outputs: {

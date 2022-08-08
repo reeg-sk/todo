@@ -1,5 +1,4 @@
 import { verify } from 'jsonwebtoken'
-import { Context } from './context'
 
 export const APP_SECRET = process.env.SECRET || '1234'
 
@@ -7,11 +6,15 @@ interface Token {
   userId: string
 }
 
-export function getUserId(context: Context) {
-  const authHeader = context.req.get('Authorization')
+export function getUserId(authHeader: string | null) {
   if (authHeader) {
     const token = authHeader.replace('Bearer ', '')
-    const verifiedToken = verify(token, APP_SECRET) as Token
-    return verifiedToken && Number(verifiedToken.userId)
+    let verifiedToken = null
+    try {
+      verifiedToken = verify(token, APP_SECRET) as Token
+    } catch(e) {
+      // Do we want to log invalid tokens?
+    }
+    return verifiedToken && verifiedToken.userId
   }
 }

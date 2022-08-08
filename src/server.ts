@@ -1,10 +1,19 @@
 import { ApolloServer } from 'apollo-server'
 import { schema } from './schema'
-import { createContext } from './context'
+import { prisma } from './context'
+import { getUserId } from './utils'
 
 const server = new ApolloServer({
   schema: schema,
-  context: createContext,
+  context: ({ req }) => {
+    const token = req?.headers?.authorization || null    
+    const userId = getUserId(token)
+        
+    return {
+      userId,
+      prisma,
+    }
+  },
   csrfPrevention: true,
   cache: 'bounded',
   cors: {
